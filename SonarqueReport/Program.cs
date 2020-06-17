@@ -23,22 +23,36 @@ namespace SonarqueReport
             var password = "password";
             var parameter = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userName}:{password}"));
             var authValue = new AuthenticationHeaderValue(scheme, parameter);
-            var urlPath = "api/issues/search?componentKeys=UK.Connect.Dev_nxt&s=FILE_LINE&languages=cs&resolved=false&severities=CRITICAL&ps=200&organization=default-organization&facets=severities%2Ctypes&additionalFields=_all";
+            var pageSize = 500;
+            int pageIndex = 1;
+            var urlPathFormat = "api/issues/search?componentKeys=LISA.Core.6.0.master&s=FILE_LINE&languages=cs&resolved=false&rules=csharpsquid%3AS3776&severities=CRITICAL&ps={0}&organization=default-organization&p={1}&additionalFields=_all";
             try
             {
-                var content = await GetReport(authValue, urlPath);
-                dynamic json = JsonConvert.DeserializeObject(content);
-                if (json == null)
+                List<Issue> issues = new List<Issue>();
+                bool flag = true;
+                while (flag)
                 {
-                    throw new Exception($"Can not parse {content} to json");
+                    var urlPath = string.Format(urlPathFormat, pageSize, pageIndex);
+                    var content = await GetReport(authValue, urlPath);
+                    Rootobject json = JsonConvert.DeserializeObject<Rootobject>(content);
+                    if (json == null)
+                    {
+                        throw new Exception($"Can not parse {content} to json");
+                    }
+                    issues.AddRange(json.issues);
+                    var paging = json.paging;
+
+                    if ( paging.pageIndex * pageSize<=paging.total )
+                    {
+                        flag = false;
+                    }
                 }
 
-                var issues = json.issues;
                 DataTable table = DataTableHelper.CreateDataTable();
                 Dictionary<string, int> dic = new Dictionary<string, int>();
                 foreach (var issue in issues)
                 {
-                    var component = issue.component.ToString();
+                    var component = issue.component;
                     if (!dic.ContainsKey(component))
                     {
                         dic.Add(component, 1);
@@ -53,7 +67,7 @@ namespace SonarqueReport
                     var index = table.Rows.Count;
                     row[DataTableHelper.columnId] = index + 1;
                     row[DataTableHelper.columnComponent] = component;
-                    var message = issue.message.ToString();
+                    var message = issue.message;
                     row[DataTableHelper.columnComplexity] = GetCyclomaticComplexity(message);
                     table.Rows.Add(row);
                 }
