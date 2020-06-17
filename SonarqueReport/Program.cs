@@ -42,7 +42,7 @@ namespace SonarqueReport
                     issues.AddRange(json.issues);
                     var paging = json.paging;
 
-                    if ( paging.pageIndex * pageSize<=paging.total )
+                    if (paging.pageIndex * pageSize >= paging.total)
                     {
                         flag = false;
                     }
