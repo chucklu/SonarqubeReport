@@ -46,6 +46,10 @@ namespace SonarqueReport
                     {
                         flag = false;
                     }
+                    else
+                    {
+                        pageIndex++;
+                    }
                 }
 
                 DataTable table = DataTableHelper.CreateDataTable();
